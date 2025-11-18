@@ -11,10 +11,10 @@ const logger = winston.createLogger({
     defaultMeta: { service: 'identity-service' },   
     transports: [
         new winston.transports.Console({
-            format: winston.format.combine([
+            format: winston.format.combine(
                 winston.format.colorize(),
                 winston.format.simple()
-            ])
+            )
         }),
         new winston.transports.File({ filename: 'error.log', level: 'error' }),
         new winston.transports.File({ filename: 'combined.log' })

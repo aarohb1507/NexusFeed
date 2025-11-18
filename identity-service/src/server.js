@@ -6,8 +6,9 @@ const cors = require('cors')
 require('dotenv').config()
 const {RateLimiterRedis} = require('rate-limiter-flexible')
 const Redis = require('ioredis')
-const {rateLimiterAPI} = require('express-rate-limit')
-const RedisStore = require('rate-limit-redis')
+const rateLimit = require('express-rate-limit')
+const RedisStoreModule = require('rate-limit-redis')
+const RedisStore = RedisStoreModule.default || RedisStoreModule
 const Router = require('./routes/identity-service')
 const errorHandler = require('./middleware/errorHandler')
 
@@ -56,7 +57,7 @@ app.use((req, res, next)=>{
 
 //Ip based rate limting for sensitive endpoints
 
-const rateLimiterMiddleware = rateLimiterAPI({
+const rateLimiterMiddleware = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 30, // limit each IP to 20 requests per windowMs
     standardHeaders: true,
