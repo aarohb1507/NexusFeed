@@ -5,7 +5,7 @@ const logger = require('./utils/logger')
 const helmet = require('helmet')
 const {rateLimit} = require('express-rate-limit') 
 const {RedisStore} = require('rate-limit-redis')
-const httpProxy = require('express-http-proxy')
+const proxy = require('express-http-proxy')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -39,3 +39,32 @@ const rateLimiterMiddleware = rateLimit({
         sendCommand: (...args) => redisClient.call(...args),
     }), 
 })
+
+//the proxy middleware to forward requests to identity-service
+const proxyOptions = {
+    proxyReqPathResolver:(req)=>{
+        return req.originalUrl.replace(/^\/v1/, "/api")
+    },
+    proxyErrorHandler:(err, res, next)=>{
+        logger.error('Error occurred while proxying request: %o', err.message)
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while processing your request',
+            error: err.message
+        })
+    }
+}
+
+//using the proxy middleware
+app.use('/v1/auth', proxy(process.env.IDENTITY_SERVICE_URL, {
+    ...proxyOptions,
+    proxyReqOptDecorator:(proxyReqOpts, srcReq)=>{
+        //add any custom headers if needed
+        proxyReqOpts.headers['content-type'] = 'application/json'
+        return proxyReqOpts
+    },
+    userResDecorator:(proxyRes, proxyResData, userReq, userRes)=>{
+        logger.info(`Response received from identity-service ${proxyRes.statusCode} for %s`, userReq.originalUrl)
+        return proxyResData
+    }       
+}))
