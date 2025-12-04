@@ -8,7 +8,7 @@ const createPost = async (req, res, next) => {
     try {
         const {content, mediaId} = req.body
         const post = new Post({
-            user: req.user.id,
+            user: req.user.userId,
             content,
             mediaId: mediaId || []
         });
