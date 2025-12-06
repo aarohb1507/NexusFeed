@@ -35,3 +35,12 @@
 {"level":"info","message":"request body is [object Object]","service":"identity-service","timestamp":"2025-11-25T01:17:15.883Z"}
 {"level":"info","message":"Hit registerUser endpoint","service":"identity-service","timestamp":"2025-11-25T01:17:15.885Z"}
 {"level":"warn","message":"New user registered: 6925039bf12d29a7b2a5fcf6","service":"identity-service","timestamp":"2025-11-25T01:17:16.024Z"}
+{"level":"info","message":"Identity Service running on port 3001","service":"identity-service","timestamp":"2025-12-06T15:32:42.324Z"}
+{"level":"info","message":"Connected to MongoDB","service":"identity-service","timestamp":"2025-12-06T15:32:42.925Z"}
+{"level":"info","message":"Recieved POST request for /api/auth/register","service":"identity-service","timestamp":"2025-12-06T15:35:30.710Z"}
+{"level":"info","message":"request body is [object Object]","service":"identity-service","timestamp":"2025-12-06T15:35:30.710Z"}
+{"level":"info","message":"Hit registerUser endpoint","service":"identity-service","timestamp":"2025-12-06T15:35:30.714Z"}
+{"level":"warn","message":"New user registered: 69344d424ba0981b3f6df424","service":"identity-service","timestamp":"2025-12-06T15:35:30.852Z"}
+{"level":"info","message":"Recieved POST request for /api/auth/login","service":"identity-service","timestamp":"2025-12-06T15:36:49.179Z"}
+{"level":"info","message":"request body is [object Object]","service":"identity-service","timestamp":"2025-12-06T15:36:49.180Z"}
+{"level":"info","message":"Hit loginUser endpoint","service":"identity-service","timestamp":"2025-12-06T15:36:49.181Z"}

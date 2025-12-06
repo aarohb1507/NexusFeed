@@ -75,12 +75,31 @@ if (!process.env.IDENTITY_SERVICE_URL) {
     }))
 }
 
+// Mount /v1/posts proxy only if post service URL is set
+if (!process.env.POST_SERVICE_URL) {
+    logger.warn('POST_SERVICE_URL not set — skipping /v1/posts proxy mount')
+} else {
+    app.use('/v1/posts', proxy(process.env.POST_SERVICE_URL, {
+        ...proxyOptions,
+        proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+            proxyReqOpts.headers['content-type'] = 'application/json'
+            proxyReqOpts.headers['x-user-id'] = srcReq.user.userId || ''
+            return proxyReqOpts 
+        },
+        userResDecorator: (proxyRes, proxyResData, userReq) => {
+            logger.info('Post-service responded %d for %s', proxyRes.statusCode, userReq.originalUrl)
+            return proxyResData
+        }})
+    )
+}
+
 // Global error handler
 app.use(errorHandler)
 
 // Start server
 app.listen(PORT, () => {
     logger.info(`API Gateway is running on port ${PORT}`)
-    logger.info(`Identity service: ${process.env.IDENTITY_SERVICE_URL || 'unset'}`)
-    logger.info(`Redis: ${process.env.REDIS_URL || 'unset'}`)
+    logger.info(`Identity service is running on ${process.env.IDENTITY_SERVICE_URL || 'unset'}`)
+    logger.info(`Post service is running on ${process.env.POST_SERVICE_URL || 'unset'}`)
+    logger.info(`Redis is running on ${process.env.REDIS_URL || 'unset'}`)
 })

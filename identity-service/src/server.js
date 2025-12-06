@@ -76,7 +76,8 @@ const rateLimiterMiddleware = rateLimit({
 
 //use the rate limiter middleware on sensitive endpoints
 app.use('/api/auth/register', rateLimiterMiddleware)
-
+app.use('/api/auth/register', rateLimiterMiddleware)
+app.use('/api/auth/login', rateLimiterMiddleware)
 //routes
 app.use('/api/auth', Router)
 

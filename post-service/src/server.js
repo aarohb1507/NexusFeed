@@ -108,6 +108,8 @@ app.use('/api/posts',(req, res, next) => {
     next();
 }, postRoutes)
 
+
+
 // Error handler
 app.use(errorHandler)
 

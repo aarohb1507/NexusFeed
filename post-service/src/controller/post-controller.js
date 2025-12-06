@@ -1,11 +1,23 @@
 const logger = require('../utils/logger');
 const Post = require('../models/Post');
 const {authenticateUser} = require('../middleware/authMiddleware');
-
+const {validatePost} = require('../utils/validation');
 // Create a new post
 const createPost = async (req, res, next) => {
     logger.info("Hit createPost endpoint");
     try {
+        const {error} = validatePost(req.body)
+                if (error){
+                    logger.warn("Validation failed during user registration: %s", error.details[0].message)
+                    return res.status(400).json({
+                        success: false,
+                        message: "Validation failed",
+                        errors: error.details.map(err => ({
+                            field: err.context.key,
+                            message: err.message
+                        }))
+                    })
+                }
         const {content, mediaId} = req.body
         const post = new Post({
             user: req.user.userId,
