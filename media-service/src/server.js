@@ -8,7 +8,7 @@ const errorHandler = require("./middleware/errorHandler");
 const logger = require("./utils/logger");
 const { connectToRabbitMQ, consumeEvent } = require("./utils/rabbitmq");
 const { handlePostDeleted } = require("./eventHandlers/media-event-handlers");
-
+const { globalRateLimiter } = require('./middleware/rateLimiters');
 const app = express();
 const PORT = process.env.PORT || 3003;
 
@@ -28,7 +28,8 @@ app.use((req, res, next) => {
   next();
 });
 
-//*** Homework - implement Ip based rate limiting for sensitive endpoints
+// Apply global rate limiter to all requests
+app.use(globalRateLimiter);
 
 app.use("/api/media", mediaRoutes);
 

@@ -16,7 +16,7 @@ const uploadMedia = async (req, res) => {
     }
 
     const { originalname, mimetype, buffer } = req.file;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     logger.info(`File details: name=${originalname}, type=${mimetype}`);
     logger.info("Uploading to cloudinary starting...");
@@ -53,7 +53,7 @@ const uploadMedia = async (req, res) => {
 
 const getAllMedias = async (req, res) => {
   try {
-    const result = await Media.find({ userId: req.user.userId });
+    const result = await Media.find({ userId: req.user.id });
 
     if (result.length === 0) {
       return res.status(404).json({
