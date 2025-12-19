@@ -93,6 +93,28 @@ if (!process.env.POST_SERVICE_URL) {
     )
 }
 
+//mount /v1/media proxy only if media service URL is set
+if (!process.env.MEDIA_SERVICE_URL) {
+    logger.warn('MEDIA_SERVICE_URL not set — skipping /v1/media proxy mount')
+} else {
+    app.use('/v1/media', validateToken, proxy(process.env.MEDIA_SERVICE_URL, {
+        ...proxyOptions,
+        proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+            if(!srcReq.headers['content-type'].startsWith('multipart/form-data')){
+                proxyReqOpts.headers['content-type'] = 'application/json'
+            }
+            proxyReqOpts.headers['x-user-id'] = srcReq.user?.id || srcReq.user?._id || ''
+            return proxyReqOpts 
+        },
+        userResDecorator: (proxyRes, proxyResData, userReq) => {
+            logger.info('Media-service responded %d for %s', proxyRes.statusCode, userReq.originalUrl)
+            return proxyResData
+        },
+        parseReqBody: false
+
+    })
+    )
+}
 // Global error handler
 app.use(errorHandler)
 
@@ -102,4 +124,5 @@ app.listen(PORT, () => {
     logger.info(`Identity service is running on ${process.env.IDENTITY_SERVICE_URL || 'unset'}`)
     logger.info(`Post service is running on ${process.env.POST_SERVICE_URL || 'unset'}`)
     logger.info(`Redis is running on ${process.env.REDIS_URL || 'unset'}`)
+    logger.info(`Media service is running on ${process.env.MEDIA_SERVICE_URL || 'unset'}`)
 })

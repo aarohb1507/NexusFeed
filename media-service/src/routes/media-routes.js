@@ -3,8 +3,8 @@ const multer = require("multer");
 const {
   uploadMedia,
   getAllMedias,
-} = require("../controllers/media-controller");
-const { authenticateRequest } = require("../middleware/authMiddleware");
+} = require("../controller/media-controller");
+const { authenticateUser } = require("../middleware/authMiddleware");
 const logger = require("../utils/logger");
 const { uploadMediaLimiter, getMediaLimiter } = require("../middleware/rateLimiters");
 const router = express.Router();
@@ -20,7 +20,7 @@ const upload = multer({
 router.post(
   "/upload",
   uploadMediaLimiter,
-  authenticateRequest,
+  authenticateUser,
   (req, res, next) => {
     upload(req, res, function (err) {
       if (err instanceof multer.MulterError) {
@@ -51,6 +51,6 @@ router.post(
   uploadMedia
 );
 
-router.get("/get",getMediaLimiter, authenticateRequest, getAllMedias);
+router.get("/get",getMediaLimiter, authenticateUser, getAllMedias);
 
 module.exports = router;

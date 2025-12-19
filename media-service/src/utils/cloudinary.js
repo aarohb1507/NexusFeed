@@ -1,6 +1,6 @@
 
 const cloudinary = require("cloudinary").v2;
-const logger = require("./utils/logger");
+const logger = require("./logger");
 
 cloudinary.config({
   cloud_name: process.env.cloud_name,
