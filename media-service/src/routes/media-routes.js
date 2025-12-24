@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const {
   uploadMedia,
-  getAllMedias,
+  getUserMedia,
 } = require("../controller/media-controller");
 const { authenticateUser } = require("../middleware/authMiddleware");
 const logger = require("../utils/logger");

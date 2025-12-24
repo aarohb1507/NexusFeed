@@ -8,6 +8,7 @@ const errorHandler = require('./middleware/errorHandler')
 const postRoutes = require('./routes/post-routes')
 const {globalRateLimiter} = require('./middleware/rateLimiters')
 const Redis = require('ioredis')
+const { connectToRabbitMQ } = require('./utils/rabbitmq')
 
 // Initialize express app
 const app = express()
@@ -49,6 +50,19 @@ app.use('/api/posts',(req, res, next)=>{
 
 // Error handler
 app.use(errorHandler)
+
+async function startServer() {
+  try {
+    await connectToRabbitMQ();
+    app.listen(PORT, () => {
+      logger.info(`Post service running on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error("Failed to connect to server", error);
+    process.exit(1);
+  }
+}
+startServer();
 
 // Start server
 app.listen(PORT, () => {

@@ -51,7 +51,7 @@ const uploadMedia = async (req, res) => {
   }
 };
 
-const getAllMedias = async (req, res) => {
+const getUserMedia = async (req, res) => {
   try {
     const result = await Media.find({ userId: req.user.id });
 
@@ -62,18 +62,17 @@ const getAllMedias = async (req, res) => {
       });
     }
 
-    // Return the found media
     return res.status(200).json({
       success: true,
-      medias: result,
+      data: result,
     });
   } catch (error) {
-    logger.error("Error fetching medias", error);
-    res.status(500).json({
+    logger.error("Error fetching user media: %s", error.message);
+    return res.status(500).json({
       success: false,
-      message: "Error fetching medias",
+      message: "Error fetching user media",
     });
   }
 };
 
-module.exports = { uploadMedia, getAllMedias };
+module.exports = { uploadMedia, getUserMedia };

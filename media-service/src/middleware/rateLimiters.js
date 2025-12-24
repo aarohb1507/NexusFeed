@@ -25,7 +25,7 @@ const globalRateLimiter = rateLimit({
 
 const uploadMediaLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 10, // 10 uploads per minute
+    max: 50, // 10 uploads per minute
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
