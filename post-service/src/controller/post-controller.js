@@ -28,11 +28,11 @@ const createPost = async (req, res, next) => {
                 }))
             })
         }
-        const {content, mediaId} = req.body
+        const {content, mediaIds} = req.body
         const post = new Post({
             user: req.user.id,
             content,
-            mediaId: mediaId || ''
+            mediaIds: mediaIds || []
         });
         await post.save();
         await invalidatePost(req, 'posts:*')
@@ -142,6 +142,7 @@ const deletePost = async (req, res, next) => {
         success: false,
       });
     }
+    
     await invalidatePost(req, req.params.id);
     return res.status(200).json({
         success: true,
