@@ -1,0 +1,265 @@
+version: '3.9'
+
+services:
+  # ========================
+  # INFRASTRUCTURE TIER
+  # ========================
+  
+  # MongoDB: Central data store for all services
+  mongo:
+    image: mongo:7.0-alpine
+    container_name: nexusfeed-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: nexusfeed
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: echo 'db.adminCommand("ping")' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis: Distributed cache for rate limiting & query caching
+  redis:
+    image: redis:7-alpine
+    container_name: nexusfeed-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # RabbitMQ: Message broker for event-driven communication
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: nexusfeed-rabbitmq
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ========================
+  # APPLICATION TIER
+  # ========================
+
+  # Identity Service: User auth & JWT tokens (Port 3001)
+  identity-service:
+    build:
+      context: .
+      dockerfile: identity-service/Dockerfile
+    container_name: nexusfeed-identity-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      MONGODB_URI: mongodb://root:rootpassword@mongo:27017/nexusfeed?authSource=admin
+      JWT_SECRET: your-secret-key-change-in-production
+      JWT_REFRESH_SECRET: your-refresh-secret-key-change-in-production
+      JWT_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://localhost:3001/health || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Post Service: Post CRUD with Redis caching (Port 3002)
+  post-service:
+    build:
+      context: .
+      dockerfile: post-service/Dockerfile
+    container_name: nexusfeed-post-service
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      MONGODB_URI: mongodb://root:rootpassword@mongo:27017/nexusfeed?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      API_GATEWAY_URL: http://api-gateway:3000
+      IDENTITY_SERVICE_URL: http://identity-service:3001
+      CACHE_TTL_POSTS: 300
+      CACHE_TTL_POST: 3600
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://localhost:3002/health || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Media Service: File uploads & CDN (Port 3003)
+  media-service:
+    build:
+      context: .
+      dockerfile: media-service/Dockerfile
+    container_name: nexusfeed-media-service
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      MONGODB_URI: mongodb://root:rootpassword@mongo:27017/nexusfeed?authSource=admin
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-test}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-test}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-test}
+      API_GATEWAY_URL: http://api-gateway:3000
+      IDENTITY_SERVICE_URL: http://identity-service:3001
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://localhost:3003/health || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Search Service: Full-text search with event indexing (Port 3004)
+  search-service:
+    build:
+      context: .
+      dockerfile: search-service/Dockerfile
+    container_name: nexusfeed-search-service
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      MONGODB_URI: mongodb://root:rootpassword@mongo:27017/nexusfeed?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      API_GATEWAY_URL: http://api-gateway:3000
+      IDENTITY_SERVICE_URL: http://identity-service:3001
+      CACHE_TTL_SEARCH: 300
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://localhost:3004/health || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # API Gateway: Single entry point with rate limiting (Port 3000)
+  # Deployed LAST after all services are ready
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: nexusfeed-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      REDIS_URL: redis://redis:6379
+      IDENTITY_SERVICE_URL: http://identity-service:3001
+      POST_SERVICE_URL: http://post-service:3002
+      MEDIA_SERVICE_URL: http://media-service:3003
+      SEARCH_SERVICE_URL: http://search-service:3004
+      JWT_SECRET: your-secret-key-change-in-production
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    depends_on:
+      redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      post-service:
+        condition: service_healthy
+      media-service:
+        condition: service_healthy
+      search-service:
+        condition: service_healthy
+    networks:
+      - nexusfeed-network
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+# ========================
+# PERSISTENT VOLUMES
+# ========================
+volumes:
+  mongo-data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+# ========================
+# CUSTOM BRIDGE NETWORK
+# ========================
+networks:
+  nexusfeed-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: nexusfeed_br0
